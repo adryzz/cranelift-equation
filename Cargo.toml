@@ -1,0 +1,2 @@
+[workspace]
+members = ["cranelift-equation-parser", "cranelift-equation"]
