@@ -16,7 +16,9 @@ pub enum RawSyntax {
     /// A known function name, like `sin` or `cos`
     Function { start: usize, end: usize },
     /// A comma. Only used for functions (like log) that can have more than one argument
-    Comma, // TODO: add powers, absolute values
+    Comma,
+    /// Absolute value symbol, |x|
+    Abs,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -33,7 +35,9 @@ pub enum Syntax<'a, T> {
     /// A known function name, like `sin` or `cos`
     Function(FunctionType),
     /// A comma. Only used for functions (like log) that can have more than one argument
-    Comma, // TODO: add powers, absolute values
+    Comma,
+    /// Absolute value symbol, |x|
+    Abs,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -41,11 +45,13 @@ pub enum Operator {
     /// `+`
     Add,
     /// `-`
-    Subtract,
+    Sub,
     /// `*`
-    Multiply,
+    Mul,
     /// `/`
-    Divide,
+    Div,
+    /// `^`
+    Pow,
 }
 
 impl TryFrom<char> for Operator {
@@ -54,9 +60,10 @@ impl TryFrom<char> for Operator {
     fn try_from(value: char) -> Result<Self, Self::Error> {
         match value {
             '+' => Ok(Self::Add),
-            '-' => Ok(Self::Subtract),
-            '*' => Ok(Self::Multiply),
-            '/' => Ok(Self::Divide),
+            '-' => Ok(Self::Sub),
+            '*' => Ok(Self::Mul),
+            '/' => Ok(Self::Div),
+            '^' => Ok(Self::Pow),
             _ => Err(EquationParseError::NoMatch),
         }
     }
@@ -118,6 +125,7 @@ pub enum FunctionType {
     Ceil,
     Floor,
     Round,
+    Abs,
 }
 
 impl FromStr for FunctionType {
@@ -147,6 +155,7 @@ impl FromStr for FunctionType {
             "ceil" => Ok(Self::Ceil),
             "floor" => Ok(Self::Floor),
             "round" => Ok(Self::Round),
+            "abs" => Ok(Self::Abs),
             _ => Err(EquationParseError::UnknownFunction),
         }
     }

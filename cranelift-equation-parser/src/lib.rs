@@ -14,6 +14,8 @@ pub fn parse<T: num_traits::Float + std::fmt::Debug + std::fmt::Display>(equatio
 
     print!("{} => ", equation);
     print::<T>(&second[..]);
+
+
 }
 
 fn first_parse(equation: &str) -> Result<Vec<RawSyntax>, EquationParseError> {
@@ -61,11 +63,13 @@ fn first_parse(equation: &str) -> Result<Vec<RawSyntax>, EquationParseError> {
         }
 
         match value {
-            ' ' => {
-                continue;
-            }
+            ' ' => continue,
             ',' => {
                 vec.push(RawSyntax::Comma);
+                continue;
+            }
+            '|' => {
+                vec.push(RawSyntax::Abs);
                 continue;
             }
             _ => {}
@@ -117,6 +121,8 @@ fn second_parse<'a, T: num_traits::Float + std::fmt::Debug>(
             | (Some(RawSyntax::Operator(_)), _)
             | (Some(RawSyntax::Comma), _)
             | (_, RawSyntax::Comma)
+            | (Some(RawSyntax::Abs), _)
+            | (_, RawSyntax::Abs)
             | (Some(RawSyntax::Parenthesis(_)), _)
             | (_, RawSyntax::Operator(_))
             | (Some(RawSyntax::Function { start: _, end: _ }), _)
@@ -125,7 +131,7 @@ fn second_parse<'a, T: num_traits::Float + std::fmt::Debug>(
             | (_, RawSyntax::Parenthesis(ParenthesisType::CloseCurly)) => {}
             _ => {
                 if index != ast.len() - 1 {
-                    vec.push(Syntax::Operator(Operator::Multiply));
+                    vec.push(Syntax::Operator(Operator::Mul));
                 }
             }
         }
@@ -148,12 +154,17 @@ fn second_parse<'a, T: num_traits::Float + std::fmt::Debug>(
                 FunctionType::from_str(&equation[*start..*end])?,
             )),
             RawSyntax::Comma => vec.push(Syntax::Comma),
+            RawSyntax::Abs => vec.push(Syntax::Abs),
         }
 
         previous_token = Some(*token);
     }
 
     Ok(vec)
+}
+
+fn third_parse<'a, T: num_traits::Float + std::fmt::Debug + std::fmt::Display>(ast: &[Syntax<'a, T>]) {
+    
 }
 
 fn print<'a, T: num_traits::Float + std::fmt::Debug + std::fmt::Display>(ast: &[Syntax<'a, T>]) {
@@ -163,9 +174,10 @@ fn print<'a, T: num_traits::Float + std::fmt::Debug + std::fmt::Display>(ast: &[
             Syntax::ValueIdent(ident) => print!("{} ", ident),
             Syntax::Operator(op) => match op {
                 Operator::Add => print!("+ "),
-                Operator::Subtract => print!("- "),
-                Operator::Multiply => print!("* "),
-                Operator::Divide => print!("/ "),
+                Operator::Sub => print!("- "),
+                Operator::Mul => print!("* "),
+                Operator::Div => print!("/ "),
+                Operator::Pow => print!("^ "),
             },
             Syntax::Parenthesis(p) => match p {
                 ParenthesisType::Open => print!("( "),
@@ -176,10 +188,11 @@ fn print<'a, T: num_traits::Float + std::fmt::Debug + std::fmt::Display>(ast: &[
                 ParenthesisType::CloseCurly => print!("}} "),
             },
             Syntax::Comma => print!(", "),
+            Syntax::Abs => print!("| "),
             Syntax::Function(func) => print!("{:?}", func),
         }
     }
-    println!("=");
+    println!("");
 }
 
 #[derive(Debug, Error)]
