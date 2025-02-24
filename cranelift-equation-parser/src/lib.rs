@@ -1,75 +1,114 @@
 mod ast;
 
+use crate::ast::FunctionType;
 use ast::{Operator, ParenthesisType, RawSyntax, Syntax};
+use std::str::FromStr;
 use thiserror::Error;
 
-pub fn parse<T>(equation: &str) {
+pub fn parse<T: num_traits::Float + std::fmt::Debug>(equation: &str) {
     // first pass
     let first = first_parse(equation).unwrap();
     dbg!(&first);
+    let second = second_parse::<T>(&first[..], equation).unwrap();
+    dbg!(&second);
 }
 
 fn first_parse(equation: &str) -> Result<Vec<RawSyntax>, EquationParseError> {
     let mut vec = Vec::new();
 
-    let mut last_start_index: Option<usize> = None;
+    let mut last_start_index: Option<(usize, bool)> = None;
 
     for (index, value) in equation.chars().enumerate() {
-        if value.is_alphanumeric() || value == '.' {
-            if last_start_index.is_none() {
-                last_start_index = Some(index);
+        if value.is_numeric() || value == '.' {
+            match last_start_index {
+                None => {}
+                Some((_, false)) => continue,
+                Some((start, true)) => {
+                    vec.push(RawSyntax::ValueIdent { start, end: index });
+                    vec.push(RawSyntax::Operator(Operator::Multiply));
+                }
             }
+
+            last_start_index = Some((index, false));
             continue;
+        } else if value.is_alphabetic() {
+            match last_start_index {
+                None => {}
+                Some((_, true)) => continue,
+                Some((start, false)) => {
+                    vec.push(RawSyntax::ValueLit { start, end: index });
+                    vec.push(RawSyntax::Operator(Operator::Multiply));
+                }
+            }
+            last_start_index = Some((index, true));
+            continue;
+        } else {
+            match last_start_index {
+                None => {}
+                Some((start, false)) => {
+                    vec.push(RawSyntax::ValueLit { start, end: index });
+                }
+                Some((start, true)) => {
+                    if value == '(' {
+                        vec.push(RawSyntax::Function { start, end: index });
+                    } else {
+                        vec.push(RawSyntax::ValueIdent { start, end: index });
+                        vec.push(RawSyntax::Operator(Operator::Multiply));
+                    }
+                }
+            }
+            last_start_index = None;
         }
 
         match value {
             ' ' => {
-                if let Some(start) = last_start_index {
-                    vec.push(RawSyntax::Value { start, end: index });
-                    last_start_index = None;
-                }
-                continue;
-            },
-            ',' => {
-                if let Some(start) = last_start_index {
-                    vec.push(RawSyntax::Value { start, end: index });
-                    last_start_index = None;
-                }
-                vec.push(RawSyntax::Comma);
-                continue;
-            },
-            '(' => {
-                if let Some(start) = last_start_index {
-                    vec.push(RawSyntax::Function { start, end: index });
-                    last_start_index = None;
-                }
-                vec.push(RawSyntax::Parenthesis(ast::ParenthesisType::Open));
                 continue;
             }
-                _ => {}
+            ',' => {
+                vec.push(RawSyntax::Comma);
+                continue;
+            }
+            _ => {}
         }
 
         if let Ok(val) = ParenthesisType::try_from(value) {
-            match val {
-                ParenthesisType::Close | ParenthesisType::CloseSquare | ParenthesisType::CloseCurly => {
-                    if let Some(start) = last_start_index {
-                        vec.push(RawSyntax::Value { start, end: index });
-                        last_start_index = None;
-                    }
-                }
-                _ => {}
-            }
             vec.push(RawSyntax::Parenthesis(val));
             continue;
         }
 
         if let Ok(val) = Operator::try_from(value) {
-            if let Some(start) = last_start_index {
-                vec.push(RawSyntax::Value { start, end: index });
-                last_start_index = None;
-            }
             vec.push(RawSyntax::Operator(val));
             continue;
+        }
+    }
+
+    Ok(vec)
+}
+
+fn second_parse<'a, T: num_traits::Float + std::fmt::Debug>(
+    ast: &[RawSyntax],
+    equation: &'a str,
+) -> Result<Vec<Syntax<'a, T>>, EquationParseError> {
+    let mut vec = Vec::with_capacity(ast.len());
+    for token in ast {
+        match token {
+            RawSyntax::ValueLit { start, end } => {
+                match T::from_str_radix(&equation[*start..*end], 10) {
+                    Ok(v) => vec.push(Syntax::ValueLit(v)),
+                    Err(_) => return Err(EquationParseError::LiteralParseError),
+                }
+            }
+            RawSyntax::ValueIdent { start, end } => {
+                vec.push(Syntax::ValueIdent(&equation[*start..*end]));
+            }
+            RawSyntax::Operator(operator) => vec.push(Syntax::Operator(*operator)),
+            RawSyntax::Parenthesis(parenthesis_type) => {
+                vec.push(Syntax::Parenthesis(*parenthesis_type));
+            }
+            RawSyntax::Function { start, end } => vec.push(Syntax::Function(
+                FunctionType::from_str(&equation[*start..*end])?,
+            )),
+            RawSyntax::Comma => vec.push(Syntax::Comma),
         }
     }
 

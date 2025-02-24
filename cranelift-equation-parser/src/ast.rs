@@ -5,8 +5,10 @@ use std::str::FromStr;
 #[derive(Debug, Clone, Copy)]
 /// An easily parsable equation syntax representation
 pub enum RawSyntax {
-    /// Indices to a literal value, like `5`, or a value identifier, like 'x'
-    Value { start: usize, end: usize },
+    /// Indices to a literal value, like `5`
+    ValueLit { start: usize, end: usize },
+    /// Indices to a value identifier, like `x`
+    ValueIdent { start: usize, end: usize },
     /// An operator, like `+`, `-`, `*`, `/`
     Operator(Operator),
     /// A parenthesis, like `(` or `)`
@@ -32,31 +34,6 @@ pub enum Syntax<'a, T> {
     Function(FunctionType),
     /// A comma. Only used for functions (like log) that can have more than one argument
     Comma, // TODO: add powers, absolute values
-}
-
-impl<'a, T> Syntax<'a, T>
-where
-    T: num_traits::Float,
-{
-    pub fn from_raw(raw: RawSyntax, string: &'a str) -> Result<Self, EquationParseError> {
-        Ok(match raw {
-            RawSyntax::Value { start, end } => {
-                match T::from_str_radix(&string[start..end], 10) {
-                    Ok(v) => Syntax::ValueLit(v),
-                    Err(_) => {
-                        // TODO: check if string is only [a-z], [A-Z]
-                        Syntax::ValueIdent(&string[start..end])
-                    }
-                } 
-            },
-            RawSyntax::Operator(operator) => Syntax::Operator(operator),
-            RawSyntax::Parenthesis(parenthesis_type) => Syntax::Parenthesis(parenthesis_type),
-            RawSyntax::Function { start, end } => {
-                Syntax::Function(FunctionType::from_str(&string[start..end])?)
-            }
-            RawSyntax::Comma => Syntax::Comma,
-        })
-    }
 }
 
 #[derive(Debug, Clone, Copy)]
