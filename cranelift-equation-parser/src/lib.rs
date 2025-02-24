@@ -28,7 +28,6 @@ fn first_parse(equation: &str) -> Result<Vec<RawSyntax>, EquationParseError> {
                 Some((_, false)) => continue,
                 Some((start, true)) => {
                     vec.push(RawSyntax::ValueIdent { start, end: index });
-                    //vec.push(RawSyntax::Operator(Operator::Multiply));
                 }
             }
 
@@ -40,7 +39,6 @@ fn first_parse(equation: &str) -> Result<Vec<RawSyntax>, EquationParseError> {
                 Some((_, true)) => continue,
                 Some((start, false)) => {
                     vec.push(RawSyntax::ValueLit { start, end: index });
-                    //vec.push(RawSyntax::Operator(Operator::Multiply));
                 }
             }
             last_start_index = Some((index, true));
@@ -56,7 +54,6 @@ fn first_parse(equation: &str) -> Result<Vec<RawSyntax>, EquationParseError> {
                         vec.push(RawSyntax::Function { start, end: index });
                     } else {
                         vec.push(RawSyntax::ValueIdent { start, end: index });
-                        //vec.push(RawSyntax::Operator(Operator::Multiply));
                     }
                 }
             }
@@ -119,6 +116,7 @@ fn second_parse<'a, T: num_traits::Float + std::fmt::Debug>(
             (None, _)
             | (Some(RawSyntax::Operator(_)), _)
             | (Some(RawSyntax::Comma), _)
+            | (_, RawSyntax::Comma)
             | (Some(RawSyntax::Parenthesis(_)), _)
             | (_, RawSyntax::Operator(_))
             | (Some(RawSyntax::Function { start: _, end: _ }), _)
