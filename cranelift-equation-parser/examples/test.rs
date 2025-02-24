@@ -1,5 +1,12 @@
+use std::io::BufRead;
+
 pub fn main() {
-    let equation = "3x + 4 * (54 - cos(3))";
-    println!("{}", &equation);
-    cranelift_equation_parser::parse::<f64>(equation);
+    let mut buffer = String::with_capacity(2048);
+    // Lock our standard input to eliminate synchronization overhead (unlocks when dropped)
+    let mut stdin = std::io::stdin().lock();
+
+    // Read our first line.
+    stdin.read_line(&mut buffer).unwrap();
+
+    cranelift_equation_parser::parse::<f64>(&buffer[..buffer.len() - 1]);
 }

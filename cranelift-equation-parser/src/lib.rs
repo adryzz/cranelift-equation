@@ -5,12 +5,15 @@ use ast::{Operator, ParenthesisType, RawSyntax, Syntax};
 use std::str::FromStr;
 use thiserror::Error;
 
-pub fn parse<T: num_traits::Float + std::fmt::Debug>(equation: &str) {
+pub fn parse<T: num_traits::Float + std::fmt::Debug + std::fmt::Display>(equation: &str) {
     // first pass
     let first = first_parse(equation).unwrap();
-    dbg!(&first);
+    //dbg!(&first);
     let second = second_parse::<T>(&first[..], equation).unwrap();
     dbg!(&second);
+
+    print!("{} => ", equation);
+    print::<T>(&second[..]);
 }
 
 fn first_parse(equation: &str) -> Result<Vec<RawSyntax>, EquationParseError> {
@@ -82,6 +85,16 @@ fn first_parse(equation: &str) -> Result<Vec<RawSyntax>, EquationParseError> {
         }
     }
 
+    match last_start_index {
+        None => {}
+        Some((start, false)) => {
+            vec.push(RawSyntax::ValueLit { start, end: equation.len() });
+        }
+        Some((start, true)) => {
+            vec.push(RawSyntax::ValueIdent { start, end: equation.len() });
+        }
+    }
+
     Ok(vec)
 }
 
@@ -113,6 +126,32 @@ fn second_parse<'a, T: num_traits::Float + std::fmt::Debug>(
     }
 
     Ok(vec)
+}
+
+fn print<'a, T: num_traits::Float + std::fmt::Debug + std::fmt::Display>(ast: &[Syntax<'a, T>]) {
+    for token in ast {
+        match token {
+            Syntax::ValueLit(val) => print!("{} ", val),
+            Syntax::ValueIdent(ident) => print!("{} ", ident),
+            Syntax::Operator(op) => match op {
+                Operator::Add => print!("+ "),
+                Operator::Subtract => print!("- "),
+                Operator::Multiply => print!("* "),
+                Operator::Divide => print!("/ "),
+            },
+            Syntax::Parenthesis(p) => match p {
+                ParenthesisType::Open => print!("( "),
+                ParenthesisType::Close => print!(") "),
+                ParenthesisType::OpenSquare => print!("[ "),
+                ParenthesisType::CloseSquare => print!("] "),
+                ParenthesisType::OpenCurly => print!("{{ "),
+                ParenthesisType::CloseCurly => print!("}} "),
+            },
+            Syntax::Comma => print!(", "),
+            Syntax::Function(func) => print!("{:?}", func),
+        }
+    }
+    println!("=");
 }
 
 #[derive(Debug, Error)]
