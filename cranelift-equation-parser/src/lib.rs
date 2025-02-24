@@ -1,7 +1,6 @@
 mod ast;
 
-use crate::ast::FunctionType;
-use ast::{Operator, ParenthesisType, RawSyntax, Syntax};
+use ast::{Operator, ParenthesisType, RawSyntax, Syntax, FunctionType};
 use std::str::FromStr;
 use thiserror::Error;
 
@@ -14,8 +13,6 @@ pub fn parse<T: num_traits::Float + std::fmt::Debug + std::fmt::Display>(equatio
 
     print!("{} => ", equation);
     print::<T>(&second[..]);
-
-
 }
 
 fn first_parse(equation: &str) -> Result<Vec<RawSyntax>, EquationParseError> {
@@ -163,11 +160,12 @@ fn second_parse<'a, T: num_traits::Float + std::fmt::Debug>(
     Ok(vec)
 }
 
-fn third_parse<'a, T: num_traits::Float + std::fmt::Debug + std::fmt::Display>(ast: &[Syntax<'a, T>]) {
-    
+fn third_parse<T: num_traits::Float + std::fmt::Debug + std::fmt::Display>(
+    ast: &[Syntax<'_, T>],
+) {
 }
 
-fn print<'a, T: num_traits::Float + std::fmt::Debug + std::fmt::Display>(ast: &[Syntax<'a, T>]) {
+fn print<T: num_traits::Float + std::fmt::Debug + std::fmt::Display>(ast: &[Syntax<'_, T>]) {
     for token in ast {
         match token {
             Syntax::ValueLit(val) => print!("{} ", val),
@@ -192,7 +190,7 @@ fn print<'a, T: num_traits::Float + std::fmt::Debug + std::fmt::Display>(ast: &[
             Syntax::Function(func) => print!("{:?}", func),
         }
     }
-    println!("");
+    println!();
 }
 
 #[derive(Debug, Error)]

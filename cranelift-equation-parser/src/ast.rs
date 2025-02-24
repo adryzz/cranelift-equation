@@ -3,7 +3,8 @@ use crate::EquationParseError;
 use std::str::FromStr;
 
 #[derive(Debug, Clone, Copy)]
-/// An easily parsable equation syntax representation
+/// An easily parsable and cheaply clonable 1st stage AST.
+/// This is a direct mapping of the equation text to something we can work with.
 pub enum RawSyntax {
     /// Indices to a literal value, like `5`
     ValueLit { start: usize, end: usize },
@@ -22,6 +23,9 @@ pub enum RawSyntax {
 }
 
 #[derive(Debug, Clone, Copy)]
+/// Easily parsable 2nd stage AST.
+/// At this stage, the parser has expanded out implicit multiplication, parsed literals and functions,
+/// but has no idea about the relationship between symbols.
 pub enum Syntax<'a, T> {
     /// A literal value, like `5`
     ValueLit(T),
@@ -119,6 +123,9 @@ pub enum FunctionType {
     Log,
     Ln,
 
+    Sqrt,
+    Root,
+
     Exp,
     Mod,
 
@@ -149,6 +156,9 @@ impl FromStr for FunctionType {
             "log" => Ok(Self::Log),
             "ln" => Ok(Self::Ln),
 
+            "sqrt" => Ok(Self::Sqrt),
+            "root" => Ok(Self::Root),
+
             "exp" => Ok(Self::Exp),
             "mod" => Ok(Self::Mod),
 
@@ -159,4 +169,54 @@ impl FromStr for FunctionType {
             _ => Err(EquationParseError::UnknownFunction),
         }
     }
+}
+
+#[derive(Debug, Clone, Copy)]
+/// A cheaply clonable high level 3rd stage AST.
+/// At this stage, the parser has fully thought out the relationship between symbols.
+pub enum Entity<'a, T> {
+    ValueLit(T),
+    Value(&'a str),
+    Operation(Operation<'a, T>),
+    Function(Function<'a, T>)
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum Operation<'a, T> {
+    Add(&'a Entity<'a, T>, &'a Entity<'a, T>),
+    Sub(&'a Entity<'a, T>, &'a Entity<'a, T>),
+    Mul(&'a Entity<'a, T>, &'a Entity<'a, T>),
+    Div(&'a Entity<'a, T>, &'a Entity<'a, T>),
+    Pow(&'a Entity<'a, T>, &'a Entity<'a, T>),
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum Function<'a, T> {
+    Sin(&'a Entity<'a, T>),
+    Cos(&'a Entity<'a, T>),
+    Tan(&'a Entity<'a, T>),
+    Cot(&'a Entity<'a, T>),
+    Sec(&'a Entity<'a, T>),
+    Csc(&'a Entity<'a, T>),
+    Sinh(&'a Entity<'a, T>),
+    Cosh(&'a Entity<'a, T>),
+    Tanh(&'a Entity<'a, T>),
+    Coth(&'a Entity<'a, T>),
+    Sech(&'a Entity<'a, T>),
+    Csch(&'a Entity<'a, T>),
+
+    Log(&'a Entity<'a, T>, &'a Entity<'a, T>),
+    Log10(&'a Entity<'a, T>),
+    Ln(&'a Entity<'a, T>),
+
+    Sqrt(&'a Entity<'a, T>),
+    Root(&'a Entity<'a, T>, &'a Entity<'a, T>),
+
+    Exp(&'a Entity<'a, T>),
+    Mod(&'a Entity<'a, T>, &'a Entity<'a, T>),
+
+    Ceil(&'a Entity<'a, T>),
+    Floor(&'a Entity<'a, T>),
+    Round(&'a Entity<'a, T>),
+    Abs(&'a Entity<'a, T>),
 }
