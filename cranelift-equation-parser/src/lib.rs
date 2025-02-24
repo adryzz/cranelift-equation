@@ -28,7 +28,7 @@ fn first_parse(equation: &str) -> Result<Vec<RawSyntax>, EquationParseError> {
                 Some((_, false)) => continue,
                 Some((start, true)) => {
                     vec.push(RawSyntax::ValueIdent { start, end: index });
-                    vec.push(RawSyntax::Operator(Operator::Multiply));
+                    //vec.push(RawSyntax::Operator(Operator::Multiply));
                 }
             }
 
@@ -40,7 +40,7 @@ fn first_parse(equation: &str) -> Result<Vec<RawSyntax>, EquationParseError> {
                 Some((_, true)) => continue,
                 Some((start, false)) => {
                     vec.push(RawSyntax::ValueLit { start, end: index });
-                    vec.push(RawSyntax::Operator(Operator::Multiply));
+                    //vec.push(RawSyntax::Operator(Operator::Multiply));
                 }
             }
             last_start_index = Some((index, true));
@@ -56,7 +56,7 @@ fn first_parse(equation: &str) -> Result<Vec<RawSyntax>, EquationParseError> {
                         vec.push(RawSyntax::Function { start, end: index });
                     } else {
                         vec.push(RawSyntax::ValueIdent { start, end: index });
-                        vec.push(RawSyntax::Operator(Operator::Multiply));
+                        //vec.push(RawSyntax::Operator(Operator::Multiply));
                     }
                 }
             }
@@ -88,10 +88,16 @@ fn first_parse(equation: &str) -> Result<Vec<RawSyntax>, EquationParseError> {
     match last_start_index {
         None => {}
         Some((start, false)) => {
-            vec.push(RawSyntax::ValueLit { start, end: equation.len() });
+            vec.push(RawSyntax::ValueLit {
+                start,
+                end: equation.len(),
+            });
         }
         Some((start, true)) => {
-            vec.push(RawSyntax::ValueIdent { start, end: equation.len() });
+            vec.push(RawSyntax::ValueIdent {
+                start,
+                end: equation.len(),
+            });
         }
     }
 
@@ -103,7 +109,29 @@ fn second_parse<'a, T: num_traits::Float + std::fmt::Debug>(
     equation: &'a str,
 ) -> Result<Vec<Syntax<'a, T>>, EquationParseError> {
     let mut vec = Vec::with_capacity(ast.len());
-    for token in ast {
+
+    // used for implicit multiplication
+    let mut previous_token: Option<RawSyntax> = None;
+
+    for (index, token) in ast.iter().enumerate() {
+        // implicit multiplication
+        match (previous_token, token) {
+            (None, _)
+            | (Some(RawSyntax::Operator(_)), _)
+            | (Some(RawSyntax::Comma), _)
+            | (Some(RawSyntax::Parenthesis(_)), _)
+            | (_, RawSyntax::Operator(_))
+            | (Some(RawSyntax::Function { start: _, end: _ }), _)
+            | (_, RawSyntax::Parenthesis(ParenthesisType::Close))
+            | (_, RawSyntax::Parenthesis(ParenthesisType::CloseSquare))
+            | (_, RawSyntax::Parenthesis(ParenthesisType::CloseCurly)) => {}
+            _ => {
+                if index != ast.len() - 1 {
+                    vec.push(Syntax::Operator(Operator::Multiply));
+                }
+            }
+        }
+
         match token {
             RawSyntax::ValueLit { start, end } => {
                 match T::from_str_radix(&equation[*start..*end], 10) {
@@ -123,6 +151,8 @@ fn second_parse<'a, T: num_traits::Float + std::fmt::Debug>(
             )),
             RawSyntax::Comma => vec.push(Syntax::Comma),
         }
+
+        previous_token = Some(*token);
     }
 
     Ok(vec)
