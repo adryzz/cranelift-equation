@@ -174,6 +174,7 @@ impl FromStr for FunctionType {
 #[derive(Debug, Clone, Copy)]
 /// A cheaply clonable high level 3rd stage AST.
 /// At this stage, the parser has fully thought out the relationship between symbols.
+/// No parentheses are present in this 3rd stage, as the order of operations has been fully parsed.
 pub enum Entity<'a, T> {
     ValueLit(T),
     Value(&'a str),
